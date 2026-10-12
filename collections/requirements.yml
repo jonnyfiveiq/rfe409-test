@@ -1,19 +1,31 @@
 ---
 # Collections requirements for testing galaxy_update_on_launch feature
-# This file demonstrates the galaxy cache behavior with AAPRFE-409
+# Uses EXTERNAL collections that must be fetched from Galaxy/Automation Hub
+# These are NOT bundled with ansible-core or default EE
 
 collections:
-  # Ansible maintained collections
-  - name: ansible.posix
-    # No version specified - will get latest available
-    # This demonstrates the cache issue: stale cache = stale version
+  # VMware automation - frequently updated, must fetch from Galaxy
+  - name: community.vmware
+    # No version = gets latest, demonstrates cache staleness
 
-  - name: ansible.utils
-    # Also gets latest when no version specified
+  # Cisco network automation - large collection
+  - name: cisco.ios
+    # Unpinned to show version resolution differences
 
-  - name: community.general
-    # Popular collection, frequently updated
-    # Good for testing cache staleness
+  # AWS cloud automation - very popular, frequent updates
+  - name: amazon.aws
 
-  # Smaller collection for faster testing
-  - name: community.crypto
+  # Azure cloud automation
+  - name: azure.azcollection
+
+  # Google Cloud automation
+  - name: google.cloud
+
+# These collections are:
+# 1. NOT bundled in ansible-core or default EE
+# 2. Must be downloaded from galaxy.ansible.com or Automation Hub
+# 3. Have frequent version updates
+# 4. Perfect for demonstrating cache staleness
+
+# With stale cache (24h TTL), you might get older versions
+# With --no-cache flag, you ALWAYS get the latest matching version

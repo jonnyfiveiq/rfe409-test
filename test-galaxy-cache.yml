@@ -1,7 +1,6 @@
 ---
 # Test playbook for AAPRFE-409 galaxy_update_on_launch feature
-# This playbook uses modules from collections defined in collections/requirements.yml
-# to verify they were installed correctly
+# Uses modules from EXTERNAL collections that must be fetched from Galaxy
 
 - name: Test Galaxy Cache Feature (AAPRFE-409)
   hosts: localhost
@@ -12,69 +11,124 @@
     - name: Display test information
       ansible.builtin.debug:
         msg: |
-          Testing AAPRFE-409: galaxy_update_on_launch feature
-          This playbook uses modules from collections to verify installation
+          ========================================
+          Testing AAPRFE-409: galaxy_update_on_launch
+          ========================================
 
-          Collections used:
-            - ansible.posix
-            - ansible.utils
-            - community.general
-            - community.crypto
+          This playbook uses EXTERNAL collections that must be
+          downloaded from Galaxy/Automation Hub:
 
-    - name: Check ansible.posix collection (sysctl module)
-      ansible.posix.sysctl:
-        name: kernel.hostname
-        state: present
-      check_mode: true
-      register: sysctl_check
-      ignore_errors: true
+          Collections tested:
+            - community.vmware (VMware automation)
+            - cisco.ios (Cisco network devices)
+            - amazon.aws (AWS cloud automation)
+            - azure.azcollection (Azure cloud automation)
+            - google.cloud (Google Cloud automation)
 
-    - name: Display sysctl check result
+          These collections are NOT bundled with ansible-core,
+          so they demonstrate the cache behavior perfectly!
+
+    - name: Check community.vmware collection availability
+      ansible.builtin.command:
+        cmd: ansible-doc community.vmware.vmware_guest_info
+      register: vmware_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display VMware collection status
       ansible.builtin.debug:
-        msg: "ansible.posix.sysctl module is available: {{ sysctl_check is not failed }}"
+        msg: "community.vmware collection is available: {{ vmware_check.rc == 0 }}"
 
-    - name: Check ansible.utils collection (validate module)
-      ansible.utils.validate:
-        data: "test"
-        criteria:
-          - "{{ data == 'test' }}"
-      register: validate_check
-      ignore_errors: true
+    - name: Check cisco.ios collection availability
+      ansible.builtin.command:
+        cmd: ansible-doc cisco.ios.ios_command
+      register: ios_check
+      changed_when: false
+      failed_when: false
 
-    - name: Display validate check result
+    - name: Display Cisco IOS collection status
       ansible.builtin.debug:
-        msg: "ansible.utils.validate module is available: {{ validate_check is not failed }}"
+        msg: "cisco.ios collection is available: {{ ios_check.rc == 0 }}"
 
-    - name: Check community.general collection (timezone module)
-      community.general.timezone:
-        name: UTC
-      check_mode: true
-      register: timezone_check
-      ignore_errors: true
+    - name: Check amazon.aws collection availability
+      ansible.builtin.command:
+        cmd: ansible-doc amazon.aws.ec2_instance_info
+      register: aws_check
+      changed_when: false
+      failed_when: false
 
-    - name: Display timezone check result
+    - name: Display AWS collection status
       ansible.builtin.debug:
-        msg: "community.general.timezone module is available: {{ timezone_check is not failed }}"
+        msg: "amazon.aws collection is available: {{ aws_check.rc == 0 }}"
 
-    - name: Display collection versions
+    - name: Check azure.azcollection availability
+      ansible.builtin.command:
+        cmd: ansible-doc azure.azcollection.azure_rm_virtualmachine_info
+      register: azure_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display Azure collection status
+      ansible.builtin.debug:
+        msg: "azure.azcollection collection is available: {{ azure_check.rc == 0 }}"
+
+    - name: Check google.cloud collection availability
+      ansible.builtin.command:
+        cmd: ansible-doc google.cloud.gcp_compute_instance_info
+      register: gcp_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display GCP collection status
+      ansible.builtin.debug:
+        msg: "google.cloud collection is available: {{ gcp_check.rc == 0 }}"
+
+    - name: Count successful collections
+      ansible.builtin.set_fact:
+        collections_available: "{{ [vmware_check.rc, ios_check.rc, aws_check.rc, azure_check.rc, gcp_check.rc] | select('eq', 0) | list | length }}"
+
+    - name: Display summary
       ansible.builtin.debug:
         msg: |
-          Collection installation successful!
+          ========================================
+          Collection Installation Summary
+          ========================================
 
-          To verify the galaxy_update_on_launch feature:
+          Collections available: {{ collections_available }}/5
 
-          1. Run this job with galaxy_update_on_launch=false
-             - ansible-galaxy will use cached metadata (24h TTL)
-             - May install older versions if cache is stale
+          ✅ community.vmware:    {{ 'YES' if vmware_check.rc == 0 else 'NO' }}
+          ✅ cisco.ios:           {{ 'YES' if ios_check.rc == 0 else 'NO' }}
+          ✅ amazon.aws:          {{ 'YES' if aws_check.rc == 0 else 'NO' }}
+          ✅ azure.azcollection:  {{ 'YES' if azure_check.rc == 0 else 'NO' }}
+          ✅ google.cloud:        {{ 'YES' if gcp_check.rc == 0 else 'NO' }}
 
-          2. Run this job with galaxy_update_on_launch=true
-             - ansible-galaxy will use --no-cache flag
-             - Always fetches latest available versions
+          ========================================
+          How to Verify AAPRFE-409
+          ========================================
 
-          Check the project update job output for the ansible-galaxy command:
-            WITH flag:    ansible-galaxy collection install --no-cache -r ...
-            WITHOUT flag: ansible-galaxy collection install -r ...
+          1. Check the PROJECT UPDATE job output (not this playbook output!)
+
+          2. Look for the ansible-galaxy collection install command
+
+          3. Compare two runs:
+
+             WITHOUT galaxy_update_on_launch (default):
+               ansible-galaxy collection install -r requirements.yml ...
+
+             WITH galaxy_update_on_launch (enabled):
+               ansible-galaxy collection install --no-cache -r requirements.yml ...
+
+          4. The --no-cache flag ensures fresh collection metadata
+             is fetched from Galaxy/Hub instead of using stale cache
+
+          ========================================
 
     - name: Success message
       ansible.builtin.debug:
-        msg: "✅ All collections installed and modules are available!"
+        msg: "✅ Test complete! Check PROJECT UPDATE job output for --no-cache flag."
+      when: collections_available | int >= 3
+
+    - name: Warning if collections missing
+      ansible.builtin.debug:
+        msg: "⚠️  Some collections are missing. This is OK for testing the --no-cache flag behavior."
+      when: collections_available | int < 3
