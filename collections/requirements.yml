@@ -1,0 +1,19 @@
+---
+# Collections requirements for testing galaxy_update_on_launch feature
+# This file demonstrates the galaxy cache behavior with AAPRFE-409
+
+collections:
+  # Ansible maintained collections
+  - name: ansible.posix
+    # No version specified - will get latest available
+    # This demonstrates the cache issue: stale cache = stale version
+
+  - name: ansible.utils
+    # Also gets latest when no version specified
+
+  - name: community.general
+    # Popular collection, frequently updated
+    # Good for testing cache staleness
+
+  # Smaller collection for faster testing
+  - name: community.crypto

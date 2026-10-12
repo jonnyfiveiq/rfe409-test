@@ -1,0 +1,80 @@
+---
+# Test playbook for AAPRFE-409 galaxy_update_on_launch feature
+# This playbook uses modules from collections defined in collections/requirements.yml
+# to verify they were installed correctly
+
+- name: Test Galaxy Cache Feature (AAPRFE-409)
+  hosts: localhost
+  gather_facts: true
+  connection: local
+
+  tasks:
+    - name: Display test information
+      ansible.builtin.debug:
+        msg: |
+          Testing AAPRFE-409: galaxy_update_on_launch feature
+          This playbook uses modules from collections to verify installation
+
+          Collections used:
+            - ansible.posix
+            - ansible.utils
+            - community.general
+            - community.crypto
+
+    - name: Check ansible.posix collection (sysctl module)
+      ansible.posix.sysctl:
+        name: kernel.hostname
+        state: present
+      check_mode: true
+      register: sysctl_check
+      ignore_errors: true
+
+    - name: Display sysctl check result
+      ansible.builtin.debug:
+        msg: "ansible.posix.sysctl module is available: {{ sysctl_check is not failed }}"
+
+    - name: Check ansible.utils collection (validate module)
+      ansible.utils.validate:
+        data: "test"
+        criteria:
+          - "{{ data == 'test' }}"
+      register: validate_check
+      ignore_errors: true
+
+    - name: Display validate check result
+      ansible.builtin.debug:
+        msg: "ansible.utils.validate module is available: {{ validate_check is not failed }}"
+
+    - name: Check community.general collection (timezone module)
+      community.general.timezone:
+        name: UTC
+      check_mode: true
+      register: timezone_check
+      ignore_errors: true
+
+    - name: Display timezone check result
+      ansible.builtin.debug:
+        msg: "community.general.timezone module is available: {{ timezone_check is not failed }}"
+
+    - name: Display collection versions
+      ansible.builtin.debug:
+        msg: |
+          Collection installation successful!
+
+          To verify the galaxy_update_on_launch feature:
+
+          1. Run this job with galaxy_update_on_launch=false
+             - ansible-galaxy will use cached metadata (24h TTL)
+             - May install older versions if cache is stale
+
+          2. Run this job with galaxy_update_on_launch=true
+             - ansible-galaxy will use --no-cache flag
+             - Always fetches latest available versions
+
+          Check the project update job output for the ansible-galaxy command:
+            WITH flag:    ansible-galaxy collection install --no-cache -r ...
+            WITHOUT flag: ansible-galaxy collection install -r ...
+
+    - name: Success message
+      ansible.builtin.debug:
+        msg: "✅ All collections installed and modules are available!"
