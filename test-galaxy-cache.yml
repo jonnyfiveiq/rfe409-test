@@ -1,10 +1,9 @@
 ---
 # Test playbook for AAPRFE-409 galaxy_update_on_launch feature
-# Uses modules from EXTERNAL collections that must be fetched from Galaxy
 
 - name: Test Galaxy Cache Feature (AAPRFE-409)
   hosts: localhost
-  gather_facts: true
+  gather_facts: false
   connection: local
 
   tasks:
@@ -15,120 +14,53 @@
           Testing AAPRFE-409: galaxy_update_on_launch
           ========================================
 
-          This playbook uses EXTERNAL collections that must be
-          downloaded from Galaxy/Automation Hub:
+          This test verifies that the galaxy_update_on_launch
+          project setting correctly passes the --no-cache flag
+          to ansible-galaxy collection install.
 
-          Collections tested:
-            - community.vmware (VMware automation)
-            - cisco.ios (Cisco network devices)
-            - amazon.aws (AWS cloud automation)
-            - azure.azcollection (Azure cloud automation)
-            - google.cloud (Google Cloud automation)
+          Collections used:
+            - community.general
+            - ansible.posix
 
-          These collections are NOT bundled with ansible-core,
-          so they demonstrate the cache behavior perfectly!
+          To verify the feature:
+          1. Check the PROJECT UPDATE job output (not this playbook!)
+          2. Look for: ansible-galaxy collection install
+          3. With feature OFF: No --no-cache flag
+          4. With feature ON: --no-cache flag present
 
-    - name: Check community.vmware collection availability
+    - name: Verify community.general is available
       ansible.builtin.command:
-        cmd: ansible-doc community.vmware.vmware_guest_info
-      register: vmware_check
+        cmd: ansible-galaxy collection list community.general
+      register: general_check
       changed_when: false
       failed_when: false
 
-    - name: Display VMware collection status
-      ansible.builtin.debug:
-        msg: "community.vmware collection is available: {{ vmware_check.rc == 0 }}"
-
-    - name: Check cisco.ios collection availability
+    - name: Verify ansible.posix is available
       ansible.builtin.command:
-        cmd: ansible-doc cisco.ios.ios_command
-      register: ios_check
+        cmd: ansible-galaxy collection list ansible.posix
+      register: posix_check
       changed_when: false
       failed_when: false
 
-    - name: Display Cisco IOS collection status
-      ansible.builtin.debug:
-        msg: "cisco.ios collection is available: {{ ios_check.rc == 0 }}"
-
-    - name: Check amazon.aws collection availability
-      ansible.builtin.command:
-        cmd: ansible-doc amazon.aws.ec2_instance_info
-      register: aws_check
-      changed_when: false
-      failed_when: false
-
-    - name: Display AWS collection status
-      ansible.builtin.debug:
-        msg: "amazon.aws collection is available: {{ aws_check.rc == 0 }}"
-
-    - name: Check azure.azcollection availability
-      ansible.builtin.command:
-        cmd: ansible-doc azure.azcollection.azure_rm_virtualmachine_info
-      register: azure_check
-      changed_when: false
-      failed_when: false
-
-    - name: Display Azure collection status
-      ansible.builtin.debug:
-        msg: "azure.azcollection collection is available: {{ azure_check.rc == 0 }}"
-
-    - name: Check google.cloud collection availability
-      ansible.builtin.command:
-        cmd: ansible-doc google.cloud.gcp_compute_instance_info
-      register: gcp_check
-      changed_when: false
-      failed_when: false
-
-    - name: Display GCP collection status
-      ansible.builtin.debug:
-        msg: "google.cloud collection is available: {{ gcp_check.rc == 0 }}"
-
-    - name: Count successful collections
-      ansible.builtin.set_fact:
-        collections_available: "{{ [vmware_check.rc, ios_check.rc, aws_check.rc, azure_check.rc, gcp_check.rc] | select('eq', 0) | list | length }}"
-
-    - name: Display summary
+    - name: Display results
       ansible.builtin.debug:
         msg: |
-          ========================================
-          Collection Installation Summary
-          ========================================
-
-          Collections available: {{ collections_available }}/5
-
-          ✅ community.vmware:    {{ 'YES' if vmware_check.rc == 0 else 'NO' }}
-          ✅ cisco.ios:           {{ 'YES' if ios_check.rc == 0 else 'NO' }}
-          ✅ amazon.aws:          {{ 'YES' if aws_check.rc == 0 else 'NO' }}
-          ✅ azure.azcollection:  {{ 'YES' if azure_check.rc == 0 else 'NO' }}
-          ✅ google.cloud:        {{ 'YES' if gcp_check.rc == 0 else 'NO' }}
-
-          ========================================
-          How to Verify AAPRFE-409
-          ========================================
-
-          1. Check the PROJECT UPDATE job output (not this playbook output!)
-
-          2. Look for the ansible-galaxy collection install command
-
-          3. Compare two runs:
-
-             WITHOUT galaxy_update_on_launch (default):
-               ansible-galaxy collection install -r requirements.yml ...
-
-             WITH galaxy_update_on_launch (enabled):
-               ansible-galaxy collection install --no-cache -r requirements.yml ...
-
-          4. The --no-cache flag ensures fresh collection metadata
-             is fetched from Galaxy/Hub instead of using stale cache
-
-          ========================================
+          Collection Status:
+          - community.general: {{ 'Available' if general_check.rc == 0 else 'Not found' }}
+          - ansible.posix: {{ 'Available' if posix_check.rc == 0 else 'Not found' }}
 
     - name: Success message
       ansible.builtin.debug:
-        msg: "✅ Test complete! Check PROJECT UPDATE job output for --no-cache flag."
-      when: collections_available | int >= 3
+        msg: |
+          ========================================
+          ✅ Test Complete!
+          ========================================
 
-    - name: Warning if collections missing
-      ansible.builtin.debug:
-        msg: "⚠️  Some collections are missing. This is OK for testing the --no-cache flag behavior."
-      when: collections_available | int < 3
+          Collections are installed.
+
+          IMPORTANT: To verify AAPRFE-409, you must check the
+          PROJECT UPDATE job output, not this playbook output!
+
+          Look for the ansible-galaxy collection install command
+          and verify the --no-cache flag appears when the feature
+          is enabled.

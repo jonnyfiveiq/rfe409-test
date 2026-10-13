@@ -1,31 +1,12 @@
 ---
-# Collections requirements for testing galaxy_update_on_launch feature
-# Uses EXTERNAL collections that must be fetched from Galaxy/Automation Hub
-# These are NOT bundled with ansible-core or default EE
+# Simplified collections for faster testing
+# Using smaller, commonly available collections
 
 collections:
-  # VMware automation - frequently updated, must fetch from Galaxy
-  - name: community.vmware
-    # No version = gets latest, demonstrates cache staleness
+  # Small, frequently updated collection
+  - name: community.general
+    # Unpinned - will get latest version
 
-  # Cisco network automation - large collection
-  - name: cisco.ios
-    # Unpinned to show version resolution differences
-
-  # AWS cloud automation - very popular, frequent updates
-  - name: amazon.aws
-
-  # Azure cloud automation
-  - name: azure.azcollection
-
-  # Google Cloud automation
-  - name: google.cloud
-
-# These collections are:
-# 1. NOT bundled in ansible-core or default EE
-# 2. Must be downloaded from galaxy.ansible.com or Automation Hub
-# 3. Have frequent version updates
-# 4. Perfect for demonstrating cache staleness
-
-# With stale cache (24h TTL), you might get older versions
-# With --no-cache flag, you ALWAYS get the latest matching version
+  # Another small collection
+  - name: ansible.posix
+    # Also unpinned
